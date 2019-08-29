@@ -7,3 +7,9 @@
 	path = components/esp-idf-ssd1306
 	url = git@github.com:bkeevil/esp-idf-ssd1306.git
 	branch = development
+
+[submodule "components/fb-gfx"]
+        path = components/fb-gfx
+        url = git@github.com:bkeevil/fb-gfx.git
+        branch = master
+

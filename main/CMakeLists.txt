@@ -17,6 +17,7 @@ set(COMPONENT_REQUIRES
     esp-idf-ssd1306
     nvs_flash
     esp_http_server
+    fb_gfx
 )
 
 set(COMPONENT_EMBED_FILES

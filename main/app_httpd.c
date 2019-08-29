@@ -5,8 +5,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
-//#include "img_converters.h"
-//#include "fb_gfx.h"
+#include "img_converters.h"
+#include "fb_gfx.h"
 #include "driver/ledc.h"
 #include "sdkconfig.h"
 #include "esp_log.h"
@@ -117,23 +117,36 @@ static esp_err_t capture_handler(httpd_req_t *req){
         return ESP_FAIL;
     }
 
-    httpd_resp_set_type(req, "image/jpeg");
-    httpd_resp_set_hdr(req, "Content-Disposition", "inline; filename=capture.jpg");
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
 
     size_t fb_len = 0;
     if(fb->format == PIXFORMAT_JPEG){
+        httpd_resp_set_type(req, "image/jpeg");
+        httpd_resp_set_hdr(req, "Content-Disposition", "inline; filename=capture.jpg");    
         fb_len = fb->len;
         res = httpd_resp_send(req, (const char *)fb->buf, fb->len);
     } else {
-        jpg_chunking_t jchunk = {req, 0};
+        httpd_resp_set_type(req, "image/bmp");
+        http_resp_set_hdr(req, "Content-Disposition", "inline; filename=capture.bmp");
+        
+        uint8_t *buf;
+        size_t buf_len;
+        if (frame2bmp(fb,&buf,&buf_len)) {
+            httpd_resp_send(req, (const char *)buf,buf_len);
+        } else {
+            httpd_resp_send_500(req);
+        }
+        if (buf != null) {
+            free(buf);
+        }
+        /*jpg_chunking_t jchunk = {req, 0};
         res = frame2jpg_cb(fb, 80, jpg_encode_stream, &jchunk)?ESP_OK:ESP_FAIL;
         httpd_resp_send_chunk(req, NULL, 0);
-        fb_len = jchunk.len;
+        fb_len = jchunk.len;*/
     }
     esp_camera_fb_return(fb);
     int64_t fr_end = esp_timer_get_time();
-    ESP_LOGI(TAG, "JPG: %uB %ums", (uint32_t)(fb_len), (uint32_t)((fr_end - fr_start)/1000));
+    ESP_LOGI(TAG, "Capture: %uB %ums", (uint32_t)(fb_len), (uint32_t)((fr_end - fr_start)/1000));
     return res;
 
 }
@@ -266,9 +279,11 @@ static esp_err_t cmd_handler(httpd_req_t *req){
     sensor_t * s = esp_camera_sensor_get();
     int res = 0;
 
-    if(!strcmp(variable, "framesize")) {
+    /*if(!strcmp(variable, "framesize")) {
       if(s->pixformat == PIXFORMAT_JPEG) res = s->set_framesize(s, (framesize_t)val);
-    }
+    }*/
+    if(!strcmp(variable, "framesize")) res = s->set_framesize(s, (framesize_t)val);
+    else if (!strcmp(variable, "pixformat")) res = s->set_pixformat(s, (pixformat_t)val);
     else if(!strcmp(variable, "quality")) res = s->set_quality(s, val);
     else if(!strcmp(variable, "contrast")) res = s->set_contrast(s, val); 
     else if(!strcmp(variable, "brightness")) res = s->set_brightness(s, val); 
@@ -350,6 +365,7 @@ static esp_err_t status_handler(httpd_req_t *req){
     *p++ = '{';
 
     p+=sprintf(p, "\"framesize\":%u,", s->status.framesize);
+    p+=sprintf(p, "\"pixformat\":%u,", s->pixformat);
     p+=sprintf(p, "\"quality\":%u,", s->status.quality);
     p+=sprintf(p, "\"brightness\":%d,", s->status.brightness);
     p+=sprintf(p, "\"contrast\":%d,", s->status.contrast);

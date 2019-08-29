@@ -3,6 +3,8 @@ document.addEventListener('DOMContentLoaded', function (event) {
   var streamUrl = baseHost + ':81'
 
   const framesize = document.getElementById('framesize')
+  const pixformat = document.getElementById('pixformat')
+  const qualityGroup = document.getElementById('quality-group')
   const ledGroup = document.getElementById('led-group')
   const awb = document.getElementById('awb_gain')
   const wb = document.getElementById('wb_mode-group')
@@ -279,6 +281,20 @@ document.addEventListener('DOMContentLoaded', function (event) {
   
   framesize.onchange = () => {
     updateConfig(framesize)
+  }
+
+  pixformat.onchange = () => {
+    updateConfig(pixformat)
+    if (pixformat.value == 3) { // 3=PIXFORMAT_JPEG
+      show(qualityGroup)
+      show(streamButton)
+      show(streamWindowLink)
+    } else {
+      stopStream  
+      hide(qualityGroup)
+      hide(streamButton)
+      hide(streamWindowLink)
+    }
   }
 
   dhcp.onchange = () => {
